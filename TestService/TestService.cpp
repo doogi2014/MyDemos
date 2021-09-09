@@ -1,6 +1,25 @@
 ﻿#include <iostream>
 #include <Windows.h>
 
+void test()
+{
+    TCHAR szIniFile[MAX_PATH];
+    ::GetModuleFileName(NULL, szIniFile, MAX_PATH);
+    // C 库函数 char *strrchr(const char *str, int c) 
+    // 在参数 str 所指向的字符串中搜索最后一次出现字符 c（一个无符号字符）的位置。
+    strrchr(szIniFile, '\\')[1] = 0;
+
+    // C 库函数 char *strchr(const char *str, int c) 
+    // 在参数 str 所指向的字符串中搜索第一次出现字符 c（一个无符号字符）的位置。
+    // https://www.runoob.com/cprogramming/c-function-strchr.html
+
+    char a[50];
+    memset(a, 0, sizeof(a));
+    const char* c = "abcdef-ghijk";
+    memcpy(a, c, strlen(c));
+    strrchr(a, '-')[1] = 0;
+}
+
 long getFileSize(const char* strFileName)
 {
     struct _stat info;
@@ -22,7 +41,7 @@ void WriteLog(const char* strOutputString, ...)
     char timeBuf[128];
     sprintf_s(timeBuf, "%4d/%02d/%02d %02d:%02d:%02d.%03d", sys.wYear, sys.wMonth, sys.wDay, sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
 
-    const char* file_name = "C:\\Users\\Neo\\source\\repos\\TestService\\Debug\\zh.log";
+    const char* file_name = "C:\\Windows\\Temp\\zh.log";
     FILE* fLog;
     fLog = fopen(file_name, "a");
     fprintf(fLog, "%s : %s\n", timeBuf, strBuffer);
@@ -33,21 +52,26 @@ void WriteLog(const char* strOutputString, ...)
     // 按大小截断日志文件
     if (getFileSize(file_name) > MAXSIZE)
     {
-        char timeBuf2[128];
-        sprintf_s(timeBuf2, "%4d-%02d-%02d_%02d-%02d-%02d.log", sys.wYear, sys.wMonth, sys.wDay, sys.wHour, sys.wMinute, sys.wSecond);
-        rename(file_name, timeBuf2);
+        char dirPath[100];
+        memset(dirPath, 0, sizeof(dirPath));
+        memcpy(dirPath, file_name, strlen(file_name));
+        strrchr(dirPath, '\\')[1] = 0;
+
+        char new_name[128];
+        sprintf_s(new_name, "%szh.%4d-%02d-%02d_%02d-%02d-%02d.log", dirPath, sys.wYear, sys.wMonth, sys.wDay, sys.wHour, sys.wMinute, sys.wSecond);
+        rename(file_name, new_name);
     }
 }
 
 //--------------------------------
-int st_quit = 0;
+//int st_quit = 0;
 DWORD WINAPI ServiceThread(LPVOID para)
 {
     int run_count = 0;
     for (;;)
     {
-        if (st_quit)
-            break;
+        //if (st_quit)
+        //    break;
         run_count++;
         WriteLog("ServiceThread running:%d", run_count);
         Sleep(1000);
@@ -68,7 +92,7 @@ void WINAPI ServiceHandler(DWORD fdwControl)
     case SERVICE_CONTROL_STOP:
     case SERVICE_CONTROL_SHUTDOWN:
         // 结束目标进程
-        st_quit = 1;
+        //st_quit = 1;
 
         ServiceStatus.dwWin32ExitCode = 0;
         ServiceStatus.dwCurrentState = SERVICE_STOPPED;
@@ -155,6 +179,7 @@ int main()
 }
 
 // sc create TestService binPath= "C:\Users\Neo\source\repos\TestService\Debug\TestService.exe"
+// sc description TestService "这是一个用来演示的测试服务程序。"
 // sc stop TestService
 // sc start TestService
 // sc delete TestService
